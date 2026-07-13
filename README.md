@@ -2,7 +2,7 @@
 
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE-MIT)
 
-**Canonical WIT contracts for [Astrid OS](https://github.com/unicity-astrid/astrid).**
+**Canonical WIT contracts for [Astrid](https://github.com/astrid-runtime/astrid).**
 
 This repo is the single source of truth for two kinds of typed contracts: capsule-to-capsule IPC interfaces (`interfaces/`) and the kernel-to-capsule host ABI (`host/`). The kernel and every SDK (Rust, JS/TS, Python, Go, etc.) submodule from this repo so contract drift across consumers becomes detectable instead of silent.
 
@@ -78,7 +78,7 @@ To evolve a package:
 
 The rule is currently a documented convention rather than a CI gate. The automated frozen-file check was retired during pre-adoption iteration (no SDK or capsule is bound to `@1.0.0` yet, so in-place amendments don't break anyone). Once a real downstream consumer ships against a versioned file, re-enable the check (the original script lives in git history) so accidental edits surface in review.
 
-See [RFC: Host ABI](https://github.com/unicity-astrid/rfcs/pull/22) for the full design (per-domain packages, multi-version kernel registration, frozen-file rule) and [issue #750](https://github.com/unicity-astrid/astrid/issues/750) for the motivating bug.
+See [RFC: Host ABI](https://github.com/astrid-runtime/rfcs/pull/22) for the full design (per-domain packages, multi-version kernel registration, frozen-file rule) and [issue #750](https://github.com/astrid-runtime/astrid/issues/750) for the motivating bug.
 
 ## Capsule interfaces (`interfaces/`) — the `astrid-bus:*` namespace
 
@@ -130,17 +130,17 @@ The kernel uses `wasmtime::component::bindgen!` against each `host/<name>@<versi
 
 Both kinds of WIT files change rarely but breakingly. The repos that submodule from here are:
 
-- [`unicity-astrid/astrid`](https://github.com/unicity-astrid/astrid) -- kernel (host implementations bound to each `host/<name>@<version>.wit`)
-- [`unicity-astrid/sdk-rust`](https://github.com/unicity-astrid/sdk-rust) -- Rust SDK (guest bindings + capsule contracts)
-- [`unicity-astrid/sdk-js`](https://github.com/unicity-astrid/sdk-js) -- JavaScript / TypeScript SDK (same)
+- [`astrid-runtime/astrid`](https://github.com/astrid-runtime/astrid) -- kernel (host implementations bound to each `host/<name>@<version>.wit`)
+- [`astrid-runtime/sdk-rust`](https://github.com/astrid-runtime/sdk-rust) -- Rust SDK (guest bindings + capsule contracts)
+- [`astrid-runtime/sdk-js`](https://github.com/astrid-runtime/sdk-js) -- JavaScript / TypeScript SDK (same)
 
 When a contract changes here, each consumer bumps its submodule pointer. CI lints can compare submodule SHAs across consumers to catch silent drift.
 
 ## Related
 
-- [Astrid OS](https://github.com/unicity-astrid/astrid) -- kernel and CLI
-- [Rust SDK](https://github.com/unicity-astrid/sdk-rust) -- Rust capsule SDK
-- [RFCs](https://github.com/unicity-astrid/rfcs) -- design proposals
+- [Astrid](https://github.com/astrid-runtime/astrid) -- kernel and CLI
+- [Rust SDK](https://github.com/astrid-runtime/sdk-rust) -- Rust capsule SDK
+- [RFCs](https://github.com/astrid-runtime/rfcs) -- design proposals
 
 ## License
 
