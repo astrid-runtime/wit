@@ -27,6 +27,7 @@ Each domain is its own package, frozen at a per-file version. A capsule imports 
 | `host/sys@1.0.0.wit` | `astrid:sys@1.0.0` | Logging, config, time, caller context, entropy, sleep, capability introspection. |
 | `host/process@1.0.0.wit` | `astrid:process@1.0.0` | OS-sandboxed host process spawn (with stdin/env/cwd), wait, signal, kill, read-logs, stdin streaming. |
 | `host/process@1.1.0.wit` | `astrid:process@1.1.0` | Additive successor to `@1.0.0` — host-verified, read-only per-spawn file injection (`file-injections` on `spawn-request`). Empty `file-injections` reproduces `@1.0.0` behaviour. |
+| `host/compute@1.0.0.wit` | `astrid:compute@1.0.0` | **Pre-1.0 draft (kept unmerged):** principal-scoped groups of signed core-Wasm workers sharing linear memory, with scheduling, cancellation, metering, and accounting in the host. |
 | `host/elicit@1.0.0.wit` | `astrid:elicit@1.0.0` | Interactive user input during install/upgrade lifecycle. |
 | `host/approval@1.0.0.wit` | `astrid:approval@1.0.0` | Human-in-the-loop approval gate for sensitive actions. |
 | `host/identity@1.0.0.wit` | `astrid:identity@1.0.0` | Multi-platform identity resolve and link. |

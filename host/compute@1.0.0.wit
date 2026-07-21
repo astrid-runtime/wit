@@ -1,0 +1,180 @@
+/// Principal-scoped parallel execution of capsule-authored core-Wasm workers.
+///
+/// PRE-1.0 DRAFT. This contract is developed and tested on an unmerged branch
+/// and is not frozen until Astrid 1.0. The host remains algorithm-blind: the
+/// capsule supplies a signed `compute-worker` module; Astrid validates,
+/// schedules, meters, cancels, and accounts for it.
+///
+/// Workers import one shared linear memory and no host functions. Bulk data and
+/// synchronization stay in that memory; this interface is the audited control
+/// plane. Each signed `compute-worker` declaration is an object-scoped grant
+/// for exactly that component id and digest.
+
+package astrid:compute@1.0.0;
+
+interface host {
+    use astrid:io/poll@1.0.0.{pollable};
+
+    /// Stable error classification. Strings are diagnostics only.
+    variant error-code {
+        /// The capsule declared no valid compute-worker object capability.
+        capability-denied,
+        /// A count, range, memory shape, or other request field is invalid.
+        invalid-input(string),
+        /// The id is unknown or does not name a `compute-worker` component.
+        no-such-worker,
+        /// Hash, imports, exports, memory type, or ABI version is invalid.
+        worker-invalid(string),
+        /// Effective principal/operator worker or memory policy denied admission.
+        quota,
+        /// A specifically addressed worker already has queued/running work.
+        busy,
+        /// Operation raced group, principal, capsule, or kernel cancellation.
+        cancelled,
+        /// Worker compile, instantiate, trap, fuel, or forced-interrupt failure.
+        worker-failed(string),
+        /// The resource is already terminal or closed.
+        closed,
+        /// A control-plane read or write exceeded the per-call transfer limit.
+        too-large,
+        /// Non-classified host error. Detail is best-effort.
+        unknown(string),
+    }
+
+    /// Whether the runtime may execute more than one worker concurrently.
+    enum execution-mode {
+        /// Resolve exactly one worker and dispatch jobs FIFO.
+        deterministic,
+        /// Use the resolved parallelism.
+        parallel,
+    }
+
+    /// How a requested worker count is resolved.
+    variant parallelism {
+        /// Useful host parallelism, reduced only by effective policy/reservations.
+        auto,
+        /// Admit exactly this count or fail with `quota`.
+        exact(u32),
+        /// Admit at least one and no more than this count.
+        at-most(u32),
+    }
+
+    /// Request to open one compute group over one declared worker artifact.
+    record group-request {
+        /// `[[component]] id` whose type is `compute-worker`.
+        worker: string,
+        mode: execution-mode,
+        parallelism: parallelism,
+        /// Initial 64-KiB shared-memory pages. Must be non-zero.
+        initial-memory-pages: u32,
+        /// Maximum pages. Must be >= initial; shared memories require a maximum.
+        maximum-memory-pages: u32,
+    }
+
+    /// Opaque pointer to capsule-defined bytes in the group's shared memory.
+    record work-descriptor {
+        /// Byte offset. Must be >= 64 (the ABI header is host-reserved).
+        offset: u64,
+        /// Byte length. `offset + length` is checked for overflow and bounds.
+        length: u64,
+        /// Application-defined value passed through without interpretation.
+        tag: u64,
+        /// `none` schedules the next available worker; `some` pins by index.
+        worker-index: option<u32>,
+        /// Optional self-limit. `none` uses the operator maximum when set, or
+        /// remains uncapped by Astrid policy. A value above the operator
+        /// maximum is denied rather than widening policy.
+        fuel: option<u64>,
+    }
+
+    enum job-state {
+        queued,
+        running,
+        completed,
+        cancelled,
+        failed,
+    }
+
+    /// Non-blocking snapshot of one job.
+    record job-status {
+        state: job-state,
+        worker-index: option<u32>,
+    }
+
+    /// Terminal result of a worker invocation.
+    record job-result {
+        state: job-state,
+        worker-index: u32,
+        /// Capsule-defined `astrid_compute_run` return code.
+        worker-status: s32,
+        fuel-consumed: u64,
+        elapsed-ns: u64,
+    }
+
+    /// Group and principal-attributed counters. Values are host-stamped.
+    record accounting {
+        workers-reserved: u32,
+        memory-bytes-current: u64,
+        memory-bytes-peak: u64,
+        jobs-submitted: u64,
+        jobs-completed: u64,
+        jobs-cancelled: u64,
+        jobs-failed: u64,
+        fuel-consumed: u64,
+    }
+
+    /// Non-blocking snapshot of one compute group.
+    record group-info {
+        worker: string,
+        mode: execution-mode,
+        parallelism: u32,
+        memory-pages: u32,
+        maximum-memory-pages: u32,
+        queued-jobs: u32,
+        running-jobs: u32,
+        usage: accounting,
+    }
+
+    /// Observer handle for one submitted invocation.
+    ///
+    /// Dropping this handle does not cancel work. The owning group controls the
+    /// worker lifetime and cancels every queued/running job when dropped.
+    resource job {
+        /// Current state without blocking.
+        status: func() -> result<job-status, error-code>;
+
+        /// Pollable that becomes ready when the job reaches a terminal state.
+        subscribe: func() -> pollable;
+
+        /// Wait for completion or a typed terminal failure.
+        join: func() -> result<job-result, error-code>;
+
+        /// Request cancellation. Idempotent.
+        cancel: func() -> result<_, error-code>;
+    }
+
+    /// Worker instances plus the shared memory they import.
+    resource compute-group {
+        /// Current immutable configuration and mutable counters.
+        info: func() -> result<group-info, error-code>;
+
+        /// Copy setup/result bytes out of shared memory (maximum 1 MiB/call).
+        read: func(offset: u64, length: u32) -> result<list<u8>, error-code>;
+
+        /// Copy setup bytes into shared memory (maximum 1 MiB/call).
+        write: func(offset: u64, data: list<u8>) -> result<_, error-code>;
+
+        /// Grow shared memory, returning the previous page count.
+        grow: func(delta-pages: u32) -> result<u32, error-code>;
+
+        /// Queue one worker invocation and return immediately.
+        submit: func(descriptor: work-descriptor) -> result<job, error-code>;
+
+        /// Cancel all queued/running work and reject new submissions.
+        cancel: func() -> result<_, error-code>;
+    }
+
+    /// Validate/admit a worker group atomically. A failed call leaves no worker,
+    /// memory, thread, or principal reservation behind.
+    open: func(request: group-request) -> result<compute-group, error-code>;
+}
