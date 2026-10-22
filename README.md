@@ -31,6 +31,7 @@ Each domain is its own package, frozen at a per-file version. A capsule imports 
 | `host/elicit@1.0.0.wit` | `astrid:elicit@1.0.0` | Interactive user input during install/upgrade lifecycle. |
 | `host/approval@1.0.0.wit` | `astrid:approval@1.0.0` | Human-in-the-loop approval gate for sensitive actions. |
 | `host/identity@1.0.0.wit` | `astrid:identity@1.0.0` | Multi-platform identity resolve and link. |
+| `host/compute@1.0.0.wit` | `astrid:compute@1.0.0` | Draft principal-scoped core-Wasm compute groups, bounded shared memory, jobs, cancellation and accounting. Requires an authenticated host provision and explicit deployment policy. |
 | `host/guest@1.0.0.wit` | `astrid:guest@1.0.0` | Guest export contract — `astrid-hook-trigger`, `run`, `astrid-install`, `astrid-upgrade`. Each entry point lives in its own world (`interceptor`, `background`, `installable`, `upgradable`) so capsules `include` only what they implement. |
 
 A capsule's world declares only the imports it uses plus the guest-export worlds it actually implements:
